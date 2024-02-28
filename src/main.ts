@@ -1,54 +1,68 @@
-import * as core from '@actions/core'
-import {inputs as getInput} from './utils/inputs'
-// Removed import for calculateDateRange as it's not needed anymore
-import {
-  getSecretScanningAlertsForScope,
-  // Removed filterAlerts import since we won't filter by date anymore
-} from './services/secretscanning'
-import {writeToFile} from './utils/utils'
-import {
-  addToSummary,
-  getSummaryMarkdown,
-  writeSummary
-} from './services/summary'
+import * as core from '@actions/core';
+import { inputs as getInput } from './utils/inputs';
+// import { calculateDateRange } from './utils/utils'; // Removed as not needed
+import { Octokit } from "@octokit/core"; // Make sure to import Octokit
+import { writeToFile } from './utils/utils';
+import { addToSummary, getSummaryMarkdown, writeSummary } from './services/summary';
+
+// Assuming Octokit is set up and authenticated elsewhere in your code
+const octokit = new Octokit({ auth: `token YOUR_PERSONAL_ACCESS_TOKEN` });
+
+async function getSecretScanningAlertsForScope(inputs) {
+  let allAlerts = [];
+  let currentPage = 1;
+  let fetchPages = true;
+
+  while (fetchPages) {
+    const response = await octokit.request('GET /repos/{owner}/{repo}/secret-scanning/alerts', {
+      owner: inputs.owner,
+      repo: inputs.repo,
+      per_page: 100,
+      page: currentPage
+    });
+
+    allAlerts = allAlerts.concat(response.data);
+
+    if (response.data.length < 100) {
+      // If we received fewer alerts than the maximum, it means this is the last page
+      fetchPages = false;
+    } else {
+      currentPage++; // Move to the next page
+    }
+  }
+
+  return allAlerts;
+}
 
 async function run(): Promise<void> {
   try {
-    // Get inputs
-    const inputs = await getInput()
-    core.info(`[✅] Inputs parsed`)
+    const inputs = await getInput();
+    core.info(`[✅] Inputs parsed`);
 
-    // Removed date range calculation as it's not needed
+    // Get all the alerts for the scope provided
+    const alerts = await getSecretScanningAlertsForScope(inputs);
+    core.info(`[✅] All alerts fetched`);
 
-    // Get the alerts for the scope provided
-    const alerts = await getSecretScanningAlertsForScope(inputs)
-
-    // Since we're not filtering by date, all alerts are considered "new"
+    // Since we're fetching all alerts without filtering, we consider all alerts as "new" for simplicity
     const newAlerts = alerts;
-    // Assume there are no resolved alerts since we're not filtering
-    const resolvedAlerts = []; 
+    const resolvedAlerts = []; // Placeholder for resolved alerts if needed
 
-    // Log alerts (removed filtering log)
-    core.debug(`All alerts: ${JSON.stringify(newAlerts)}`)
-    core.info(`[✅] Alerts fetched`)
+    // Save alerts to file
+    writeToFile(inputs.new_alerts_filepath, JSON.stringify(newAlerts));
+    writeToFile(inputs.closed_alerts_filepath, JSON.stringify(resolvedAlerts));
+    core.info(`[✅] Alerts saved to files`);
 
-    // Save newAlerts (and resolvedAlerts, if any) to file
-    writeToFile(inputs.new_alerts_filepath, JSON.stringify(newAlerts))
-    writeToFile(inputs.closed_alerts_filepath, JSON.stringify(resolvedAlerts))
-    core.info(`[✅] Alerts saved to files`)
-
-    // Print results as Action summary and set it as `summary-markdown` output
+    // Add to summary
     if (process.env.LOCAL_DEV !== 'true') {
-      addToSummary('Alerts', newAlerts)
-      // Since resolved alerts are not filtered, you might not add them or adjust accordingly
-      writeSummary()
+      addToSummary('New Alerts', newAlerts);
+      // Adjusted to only include new alerts in summary
+      writeSummary();
     }
-    core.setOutput('summary-markdown', getSummaryMarkdown())
-    core.info(`[✅] Summary output completed`)
+    core.setOutput('summary-markdown', getSummaryMarkdown());
+    core.info(`[✅] Summary output completed`);
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) core.setFailed(error.message);
   }
 }
 
-run()
-
+run();
