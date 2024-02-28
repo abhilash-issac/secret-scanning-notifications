@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import {inputs as getInput} from './utils/inputs'
-import {calculateDateRange} from './utils/utils'
+// Removed import for calculateDateRange as it's not needed anymore
 import {
   getSecretScanningAlertsForScope,
-  filterAlerts
+  // Removed filterAlerts import since we won't filter by date anymore
 } from './services/secretscanning'
 import {writeToFile} from './utils/utils'
 import {
@@ -18,32 +18,29 @@ async function run(): Promise<void> {
     const inputs = await getInput()
     core.info(`[✅] Inputs parsed`)
 
-    // Calculate date range
-    const minimumDate = await calculateDateRange(inputs.frequency)
-    core.info(`[✅] Date range calculated: ${minimumDate}`)
+    // Removed date range calculation as it's not needed
 
     // Get the alerts for the scope provided
     const alerts = await getSecretScanningAlertsForScope(inputs)
 
-    // Filter new alerts created after the minimum date and before the current date
-    const [newAlerts, resolvedAlerts] = await filterAlerts(minimumDate, alerts)
+    // Since we're not filtering by date, all alerts are considered "new"
+    const newAlerts = alerts;
+    // Assume there are no resolved alerts since we're not filtering
+    const resolvedAlerts = []; 
 
-    // Log filtered resolved alerts
-    core.debug(
-      `The filtered resolved alrets is ${JSON.stringify(resolvedAlerts)}`
-    )
-    core.debug(`The filtered new alerts is ${JSON.stringify(newAlerts)}`)
-    core.info(`[✅] Alerts parsed`)
+    // Log alerts (removed filtering log)
+    core.debug(`All alerts: ${JSON.stringify(newAlerts)}`)
+    core.info(`[✅] Alerts fetched`)
 
-    // Save newAlerts and resolvedAlerts to file
+    // Save newAlerts (and resolvedAlerts, if any) to file
     writeToFile(inputs.new_alerts_filepath, JSON.stringify(newAlerts))
     writeToFile(inputs.closed_alerts_filepath, JSON.stringify(resolvedAlerts))
     core.info(`[✅] Alerts saved to files`)
 
     // Print results as Action summary and set it as `summary-markdown` output
     if (process.env.LOCAL_DEV !== 'true') {
-      addToSummary('New Alerts', newAlerts)
-      addToSummary('Resolved Alerts', resolvedAlerts)
+      addToSummary('Alerts', newAlerts)
+      // Since resolved alerts are not filtered, you might not add them or adjust accordingly
       writeSummary()
     }
     core.setOutput('summary-markdown', getSummaryMarkdown())
@@ -54,3 +51,4 @@ async function run(): Promise<void> {
 }
 
 run()
+
