@@ -18,29 +18,20 @@ async function run(): Promise<void> {
     const inputs = await getInput()
     core.info(`[✅] Inputs parsed`)
 
-    // Calculate date range
-    const minimumDate = await calculateDateRange(inputs.frequency)
-    core.info(`[✅] Date range calculated: ${minimumDate}`)
-
-    // Get the alerts for the scope provided
+    // Get the alerts for the scope provided without date filtering
     const alerts = await getSecretScanningAlertsForScope(inputs)
+    core.info(`[✅] Alerts fetched`)
 
-    // Filter new alerts created after the minimum date and before the current date
-    const [newAlerts, resolvedAlerts] = await filterAlerts(minimumDate, alerts)
+    // Since we're not filtering by dates, treat all fetched alerts as "new" for simplicity
+    const newAlerts = alerts.filter(alert => alert.state === 'open');
+    const resolvedAlerts = alerts.filter(alert => alert.state === 'resolved');
+    core.debug(`All alerts are treated based on their current state without date filtering.`)
 
-    // Log filtered resolved alerts
-    core.debug(
-      `The filtered resolved alrets is ${JSON.stringify(resolvedAlerts)}`
-    )
-    core.debug(`The filtered new alerts is ${JSON.stringify(newAlerts)}`)
-    core.info(`[✅] Alerts parsed`)
-
-    // Save newAlerts and resolvedAlerts to file
+    // Continue with the rest of the original logic...
     writeToFile(inputs.new_alerts_filepath, JSON.stringify(newAlerts))
     writeToFile(inputs.closed_alerts_filepath, JSON.stringify(resolvedAlerts))
     core.info(`[✅] Alerts saved to files`)
 
-    // Print results as Action summary and set it as `summary-markdown` output
     if (process.env.LOCAL_DEV !== 'true') {
       addToSummary('New Alerts', newAlerts)
       addToSummary('Resolved Alerts', resolvedAlerts)
