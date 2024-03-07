@@ -7,7 +7,7 @@ dotenv.config()
 
 export const inputs = async (): Promise<inputsReturned> => {
   try {
-    let frequency: number
+    // let frequency: number
     let scope: scopeInput
     let api_token: string
     let apiURL: string
@@ -18,7 +18,7 @@ export const inputs = async (): Promise<inputsReturned> => {
     let closed_alerts_filepath: string
     //if the env LOCAL_DEV is set to true, then use the .env file
     if (process.env.LOCAL_DEV === 'true') {
-      frequency = Number(process.env.FREQUENCY)
+      // frequency = Number(process.env.FREQUENCY)
       scope = process.env.SCOPE as scopeInput
       api_token = process.env.GITHUB_TOKEN as string
       apiURL = process.env.GITHUB_API_URL as string
@@ -29,7 +29,7 @@ export const inputs = async (): Promise<inputsReturned> => {
       closed_alerts_filepath = process.env.CLOSED_ALERTS_FILEPATH as string
     } else {
       //otherwise use the inputs from the action
-      frequency = Number(core.getInput('frequency'))
+      // frequency = Number(core.getInput('frequency'))
       scope = core.getInput('scope') as scopeInput
       api_token = core.getInput('token')
       apiURL = core.getInput('api_url') || github.context.apiUrl
@@ -40,7 +40,7 @@ export const inputs = async (): Promise<inputsReturned> => {
       closed_alerts_filepath = core.getInput('closed_alerts_filepath')
     }
     return {
-      frequency,
+      // frequency,
       scope,
       api_token,
       apiURL,
