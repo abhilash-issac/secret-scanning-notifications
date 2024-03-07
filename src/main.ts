@@ -1,68 +1,56 @@
-import * as core from '@actions/core';
-import { inputs as getInput } from './utils/inputs';
-// import { calculateDateRange } from './utils/utils'; // Removed as not needed
-import { Octokit } from "@octokit/core"; // Make sure to import Octokit
-import { writeToFile } from './utils/utils';
-import { addToSummary, getSummaryMarkdown, writeSummary } from './services/summary';
-
-// Assuming Octokit is set up and authenticated elsewhere in your code
-const octokit = new Octokit({ auth: `token YOUR_PERSONAL_ACCESS_TOKEN` });
-
-async function getSecretScanningAlertsForScope(inputs) {
-  let allAlerts = [];
-  let currentPage = 1;
-  let fetchPages = true;
-
-  while (fetchPages) {
-    const response = await octokit.request('GET /repos/{owner}/{repo}/secret-scanning/alerts', {
-      owner: inputs.owner,
-      repo: inputs.repo,
-      per_page: 100,
-      page: currentPage
-    });
-
-    allAlerts = allAlerts.concat(response.data);
-
-    if (response.data.length < 100) {
-      // If we received fewer alerts than the maximum, it means this is the last page
-      fetchPages = false;
-    } else {
-      currentPage++; // Move to the next page
-    }
-  }
-
-  return allAlerts;
-}
+import * as core from '@actions/core'
+import {inputs as getInput} from './utils/inputs'
+import {calculateDateRange} from './utils/utils'
+import {
+  getSecretScanningAlertsForScope,
+  filterAlerts
+} from './services/secretscanning'
+import {writeToFile} from './utils/utils'
+import {
+  addToSummary,
+  getSummaryMarkdown,
+  writeSummary
+} from './services/summary'
 
 async function run(): Promise<void> {
   try {
-    const inputs = await getInput();
-    core.info(`[✅] Inputs parsed`);
+    // Get inputs
+    const inputs = await getInput()
+    core.info(`[✅] Inputs parsed`)
 
-    // Get all the alerts for the scope provided
-    const alerts = await getSecretScanningAlertsForScope(inputs);
-    core.info(`[✅] All alerts fetched`);
+    // Calculate date range
+    const minimumDate = await calculateDateRange(inputs.frequency)
+    core.info(`[✅] Date range calculated: ${minimumDate}`)
 
-    // Since we're fetching all alerts without filtering, we consider all alerts as "new" for simplicity
-    const newAlerts = alerts;
-    const resolvedAlerts = []; // Placeholder for resolved alerts if needed
+    // Get the alerts for the scope provided
+    const alerts = await getSecretScanningAlertsForScope(inputs)
 
-    // Save alerts to file
-    writeToFile(inputs.new_alerts_filepath, JSON.stringify(newAlerts));
-    writeToFile(inputs.closed_alerts_filepath, JSON.stringify(resolvedAlerts));
-    core.info(`[✅] Alerts saved to files`);
+    // Filter new alerts created after the minimum date and before the current date
+    const [newAlerts, resolvedAlerts] = await filterAlerts(minimumDate, alerts)
 
-    // Add to summary
+    // Log filtered resolved alerts
+    core.debug(
+      `The filtered resolved alrets is ${JSON.stringify(resolvedAlerts)}`
+    )
+    core.debug(`The filtered new alerts is ${JSON.stringify(newAlerts)}`)
+    core.info(`[✅] Alerts parsed`)
+
+    // Save newAlerts and resolvedAlerts to file
+    writeToFile(inputs.new_alerts_filepath, JSON.stringify(newAlerts))
+    writeToFile(inputs.closed_alerts_filepath, JSON.stringify(resolvedAlerts))
+    core.info(`[✅] Alerts saved to files`)
+
+    // Print results as Action summary and set it as `summary-markdown` output
     if (process.env.LOCAL_DEV !== 'true') {
-      addToSummary('New Alerts', newAlerts);
-      // Adjusted to only include new alerts in summary
-      writeSummary();
+      addToSummary('New Alerts', newAlerts)
+      addToSummary('Resolved Alerts', resolvedAlerts)
+      writeSummary()
     }
-    core.setOutput('summary-markdown', getSummaryMarkdown());
-    core.info(`[✅] Summary output completed`);
+    core.setOutput('summary-markdown', getSummaryMarkdown())
+    core.info(`[✅] Summary output completed`)
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message);
+    if (error instanceof Error) core.setFailed(error.message)
   }
 }
 
-run();
+run()
