@@ -24,23 +24,23 @@ export async function getSecretScanningAlertsForScope(
 
 // filter the alerts based on the minimum date and current date and by status (new or resolved) and return in two objects
 export async function filterAlerts(
-  minimumDate: Date,
+  // minimumDate: Date,
   alerts: SecretScanningAlert[]
 ): Promise<SecretScanningAlert[][]> {
   // Filter new alerts created after the minimum date and before the current date
   const newAlertsResponse = alerts.filter(alert => {
     if (alert.created_at != null && alert.state === 'open') {
-      const created = new Date(alert.created_at)
-      return created > minimumDate && created < new Date()
+      const created = alert.created_at
+      return created
     }
   })
 
   // Filter resolved alerts created after the minimum date and before the current date
   const resolvedAlertsResponse = alerts.filter(alert => {
     if (alert.resolved_at != null && alert.state === 'resolved') {
-      const resolved = new Date(alert.resolved_at)
+      const resolved = alert.resolved_at
       alert.state === 'resolved'
-      return resolved > minimumDate && resolved < new Date()
+      return resolved
     }
   })
 
