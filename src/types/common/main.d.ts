@@ -7,6 +7,7 @@ type inputsReturned = {
   apiURL: string
   repo: string
   owner: string
+  org: string // added this line 
   enterprise: string
   new_alerts_filepath: string
   closed_alerts_filepath: string
@@ -23,6 +24,8 @@ type SecretScanningAlert = {
   html_url: string
   state: string
   secret_type: string
+  org_owner: string // added this line
+  repo_owner: string // added this line
 }
 
 type RateLimitOptions = {
