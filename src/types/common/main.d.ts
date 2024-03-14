@@ -25,6 +25,8 @@ type SecretScanningAlert = {
   secret_type: string
   login: string
   name: string
+  org_owner: string
+  org_name: string
 }
 
 type RateLimitOptions = {
