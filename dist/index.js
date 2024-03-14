@@ -226,7 +226,7 @@ async function getSecretScanningAlertsForScope(input) {
     }
     catch (error) {
         if (error instanceof Error) {
-            core.debug(`Error with fatching alerts from the API.: ${error}`);
+            core.debug(`Error with fetching alerts from the API.: ${error}`);
             core.setFailed('Error: There was an error fetching the alerts from the API. Please check the logs.');
             throw new Error(error.message);
         }
@@ -290,13 +290,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getSummaryMarkdown = exports.writeSummary = exports.addToSummary = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 function addToSummary(title, alerts) {
-    const headers = ['Alert Number', 'Secret State', 'Secret Type', 'HTML URL'];
+    const headers = ['Alert Number', 'Secret State', 'Secret Type', 'HTML URL', 'Repo Owner', 'Repo Name', 'Org Name', 'Org Owner'];
     // Define the table rows
     const rows = alerts.map(alert => [
         alert.number.toString(),
         alert.state,
         alert.secret_type,
-        alert.html_url
+        alert.html_url,
+        alert.login,
+        alert.name
     ]);
     // Add the table to the Action summary
     core.summary
